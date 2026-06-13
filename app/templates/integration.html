@@ -3,20 +3,39 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h1 class="h2 mb-1">Codex Integration</h1>
-    <p class="muted mb-0">Install the skill, set the environment variables, and ask Codex to diagnose hackrome-ssh through AgentGate.</p>
+    <p class="muted mb-0">Choose an API key and download a ready-to-use Codex skill. The SSH secret stays inside AgentGate.</p>
   </div>
   <div class="d-flex gap-2">
-    <a class="btn btn-primary" href="/skill/agentgate.md" download="SKILL.md">Download skill</a>
-    <a class="btn btn-outline-secondary" href="/skill/agentgate.tar.gz" download="agentgate-codex-skill.tar.gz">Download package</a>
+    <a class="btn btn-outline-secondary" href="/skill/agentgate.md" download="SKILL.md">Download public skill</a>
+    <a class="btn btn-outline-secondary" href="/skill/agentgate.tar.gz" download="agentgate-codex-skill.tar.gz">Public package</a>
   </div>
 </div>
 
 <div class="row g-3">
   <div class="col-lg-5">
     <div class="panel p-4 h-100">
-      <h2 class="h5">Environment</h2>
+      <h2 class="h5">Ready skill for judges</h2>
+      {% if keys %}
+      <form method="get" action="/skill/agentgate.md" class="mb-3">
+        <label class="form-label">API key to embed</label>
+        <select class="form-select mb-3" name="api_key_id">
+          {% for key in keys %}
+          <option value="{{ key.id }}">{{ key.name }} - {{ key.key_prefix }}...</option>
+          {% endfor %}
+        </select>
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-primary">Download ready SKILL.md</button>
+          <button class="btn btn-outline-secondary" formaction="/skill/agentgate.tar.gz">Download ready package</button>
+        </div>
+      </form>
+      <p class="muted mb-0">The downloaded skill includes the selected API key and is ready to install in Codex.</p>
+      {% else %}
+      <p class="muted">No exportable API keys yet. Generate a new key from API Keys, then come back here.</p>
+      <a class="btn btn-primary" href="/api-keys">Generate API key</a>
+      {% endif %}
+      <h2 class="h5 mt-4">Manual environment fallback</h2>
       <pre class="terminal">AGENTGATE_BASE_URL={{ base_url }}
-AGENTGATE_API_KEY=ag_live_xxxxxxxxx</pre>
+AGENTGATE_API_KEY=optional_if_using_ready_skill</pre>
       <h2 class="h5 mt-4">Install locally</h2>
       <pre class="terminal">curl -fsSL {{ base_url }}/skill/install.sh | bash</pre>
       <h2 class="h5 mt-4">Demo prompt</h2>

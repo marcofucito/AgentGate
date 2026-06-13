@@ -24,7 +24,7 @@ AGENTGATE_API_KEY={{ new_key }}</pre>
 
 <div class="panel p-3">
   <table class="table mb-0">
-    <thead><tr><th>Name</th><th>Prefix</th><th>Status</th><th>Last used</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Prefix</th><th>Status</th><th>Last used</th><th>Codex skill</th><th></th></tr></thead>
     <tbody>
       {% for key in keys %}
       <tr>
@@ -32,6 +32,18 @@ AGENTGATE_API_KEY={{ new_key }}</pre>
         <td><code>{{ key.key_prefix }}...</code></td>
         <td>{{ "revoked" if key.revoked else "active" }}</td>
         <td>{{ key.last_used_at or "-" }}</td>
+        <td>
+          {% if key.encrypted_token and not key.revoked %}
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-sm btn-primary" href="/skill/agentgate.md?api_key_id={{ key.id }}" download="SKILL.md">Download ready skill</a>
+            <a class="btn btn-sm btn-outline-secondary" href="/skill/agentgate.tar.gz?api_key_id={{ key.id }}" download="agentgate-codex-skill.tar.gz">Package</a>
+          </div>
+          {% elif key.revoked %}
+          <span class="muted">revoked</span>
+          {% else %}
+          <span class="muted">not exportable</span>
+          {% endif %}
+        </td>
         <td>{% if not key.revoked %}<form method="post" action="/api-keys/{{ key.id }}/revoke"><button class="btn btn-sm btn-outline-danger">Revoke</button></form>{% endif %}</td>
       </tr>
       {% endfor %}

@@ -79,6 +79,7 @@ class ApiKey(Base):
     name: Mapped[str] = mapped_column(String(120))
     key_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     key_prefix: Mapped[str] = mapped_column(String(32))
+    encrypted_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
@@ -151,6 +152,15 @@ def current_api_key(request: Request, db: Session) -> ApiKey:
     api_key.last_used_at = datetime.now(timezone.utc)
     db.commit()
     return api_key
+
+
+def ensure_schema():
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    with engine.begin() as conn:
+        columns = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(api_keys)").fetchall()]
+        if "encrypted_token" not in columns:
+            conn.exec_driver_sql("ALTER TABLE api_keys ADD COLUMN encrypted_token TEXT")
 
 
 def is_command_allowed(command: str, allowed_patterns: list[str], denied_patterns: list[str], default_policy: str):
@@ -306,9 +316,26 @@ def build_server_reviews(rows):
     return sorted(reviews.values(), key=lambda item: item["server"].name.lower())
 
 
+def exportable_api_key_token(request: Request, api_key_id: int | None) -> str | None:
+    if api_key_id is None:
+        return None
+    redirect = require_user(request)
+    if redirect:
+        raise HTTPException(status_code=401, detail="Login required to export a ready-to-use skill")
+    db = get_db()
+    try:
+        key = db.get(ApiKey, api_key_id)
+        if not key or key.revoked or not key.encrypted_token:
+            raise HTTPException(status_code=404, detail="Exportable API key not found")
+        return decrypt(key.encrypted_token)
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(bind=engine)
+    ensure_schema()
     db = get_db()
     try:
         if not db.query(User).filter_by(email="admin@example.com").first():
@@ -641,7 +668,14 @@ async def create_api_key(request: Request):
     token = f"ag_live_{secrets.token_urlsafe(24)}"
     db = get_db()
     try:
-        db.add(ApiKey(name=form.get("name") or "Codex", key_hash=hash_text(token), key_prefix=token[:18]))
+        db.add(
+            ApiKey(
+                name=form.get("name") or "Codex",
+                key_hash=hash_text(token),
+                key_prefix=token[:18],
+                encrypted_token=encrypt(token),
+            )
+        )
         db.commit()
         return RedirectResponse(f"/api-keys?new_key={token}", status_code=303)
     finally:
@@ -688,10 +722,40 @@ async def integration_page(request: Request):
     redirect = require_user(request)
     if redirect:
         return redirect
-    return templates.TemplateResponse("integration.html", {"request": request, "base_url": BASE_URL})
+    db = get_db()
+    try:
+        keys = (
+            db.query(ApiKey)
+            .filter(ApiKey.revoked.is_(False), ApiKey.encrypted_token.isnot(None))
+            .order_by(ApiKey.created_at.desc())
+            .all()
+        )
+        return templates.TemplateResponse("integration.html", {"request": request, "base_url": BASE_URL, "keys": keys})
+    finally:
+        db.close()
 
 
-def skill_markdown():
+def skill_markdown(api_key: str | None = None):
+    api_key_line = f"- AGENTGATE_API_KEY, embedded demo value: `{api_key}`" if api_key else "- AGENTGATE_API_KEY"
+    auth_workflow = (
+        "1. Use the embedded AGENTGATE_API_KEY below unless the user explicitly overrides it with an environment variable.\n"
+        "2. If AGENTGATE_BASE_URL is missing, use https://agentgate.fucito.it.\n"
+        "3. If the target server is unclear, call GET /api/targets.\n"
+        "4. Match the user request to an available target. Prefer hackrome-ssh for the public demo.\n"
+        "5. Send the SSH command to POST /api/ssh/exec.\n"
+        "6. Return stdout, stderr, exit code and a concise explanation to the user.\n"
+        "7. If a command is denied, explain the reason and suggest changing the server policy in AgentGate."
+        if api_key
+        else "1. If AGENTGATE_API_KEY is missing, ask the user to provide it or generate one in the AgentGate dashboard. Never ask for SSH credentials.\n"
+        "2. If AGENTGATE_BASE_URL is missing, use https://agentgate.fucito.it.\n"
+        "3. If the target server is unclear, call GET /api/targets.\n"
+        "4. Match the user request to an available target. Prefer hackrome-ssh for the public demo.\n"
+        "5. Send the SSH command to POST /api/ssh/exec.\n"
+        "6. Return stdout, stderr, exit code and a concise explanation to the user.\n"
+        "7. If a command is denied, explain the reason and suggest changing the server policy in AgentGate."
+    )
+    auth_header = f'Authorization: Bearer ${{AGENTGATE_API_KEY:-{api_key}}}' if api_key else "Authorization: Bearer $AGENTGATE_API_KEY"
+    curl_auth = f'"Authorization: Bearer ${{AGENTGATE_API_KEY:-{api_key}}}"' if api_key else '"Authorization: Bearer $AGENTGATE_API_KEY"'
     return f"""---
 name: agentgate-ssh
 description: Use when the user asks to inspect, diagnose, or operate on SSH servers through AgentGate PAM, including Linux health checks, nginx/systemd status, logs, disk, memory, uptime, processes, deployments, or blocked command audit. Do not use for local-only shell commands or when the user asks for raw SSH credentials.
@@ -707,7 +771,7 @@ The agent must never receive SSH credentials. It must call AgentGate.
 
 Environment variables:
 - AGENTGATE_BASE_URL, defaults to https://agentgate.fucito.it if unset
-- AGENTGATE_API_KEY
+{api_key_line}
 
 Public HackRome demo broker:
 - Base URL: https://agentgate.fucito.it
@@ -715,23 +779,17 @@ Public HackRome demo broker:
 - Fallback/demo target: web-demo
 
 Workflow:
-1. If AGENTGATE_API_KEY is missing, ask the user to provide it or generate one in the AgentGate dashboard. Never ask for SSH credentials.
-2. If AGENTGATE_BASE_URL is missing, use https://agentgate.fucito.it.
-3. If the target server is unclear, call GET /api/targets.
-4. Match the user request to an available target. Prefer hackrome-ssh for the public demo.
-5. Send the SSH command to POST /api/ssh/exec.
-6. Return stdout, stderr, exit code and a concise explanation to the user.
-7. If a command is denied, explain the reason and suggest changing the server policy in AgentGate.
+{auth_workflow}
 
 Use curl for API calls:
 
 ```bash
-curl -sS -H "Authorization: Bearer $AGENTGATE_API_KEY" \\
+curl -sS -H {curl_auth} \\
   "${{AGENTGATE_BASE_URL:-https://agentgate.fucito.it}}/api/targets"
 ```
 
 ```bash
-curl -sS -H "Authorization: Bearer $AGENTGATE_API_KEY" \\
+curl -sS -H {curl_auth} \\
   -H "Content-Type: application/json" \\
   -d '{{"target":"hackrome-ssh","command":"whoami && hostname && uptime && systemctl is-active nginx"}}' \\
   "${{AGENTGATE_BASE_URL:-https://agentgate.fucito.it}}/api/ssh/exec"
@@ -740,10 +798,10 @@ curl -sS -H "Authorization: Bearer $AGENTGATE_API_KEY" \\
 HTTP examples:
 
 GET $AGENTGATE_BASE_URL/api/targets
-Authorization: Bearer $AGENTGATE_API_KEY
+{auth_header}
 
 POST $AGENTGATE_BASE_URL/api/ssh/exec
-Authorization: Bearer $AGENTGATE_API_KEY
+{auth_header}
 Content-Type: application/json
 
 {{"target":"web-demo","command":"df -h && free -m && uptime && ps aux | head"}}
@@ -770,9 +828,10 @@ Examples:
 
 
 @app.get("/skill/agentgate.md", response_class=PlainTextResponse)
-async def get_skill():
+async def get_skill(request: Request, api_key_id: int | None = None):
+    api_key = exportable_api_key_token(request, api_key_id)
     return PlainTextResponse(
-        skill_markdown(),
+        skill_markdown(api_key),
         headers={"Content-Disposition": 'attachment; filename="SKILL.md"'},
     )
 
@@ -800,9 +859,10 @@ echo "  export AGENTGATE_API_KEY=ag_live_..."
 
 
 @app.get("/skill/agentgate.tar.gz")
-async def get_skill_archive():
+async def get_skill_archive(request: Request, api_key_id: int | None = None):
+    api_key = exportable_api_key_token(request, api_key_id)
     buffer = io.BytesIO()
-    data = skill_markdown().encode()
+    data = skill_markdown(api_key).encode()
     with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
         info = tarfile.TarInfo("agentgate/SKILL.md")
         info.size = len(data)
