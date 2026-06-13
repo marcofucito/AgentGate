@@ -12,6 +12,7 @@ services:
       AGENTGATE_ADMIN_PASSWORD: ${AGENTGATE_ADMIN_PASSWORD:-change-me-before-demo}
       AGENTGATE_BASE_URL: ${AGENTGATE_BASE_URL:-http://localhost:8000}
       AGENTGATE_MAGIC_TOKEN: ${AGENTGATE_MAGIC_TOKEN:-}
+      AGENTGATE_MAGIC_TOKENS: ${AGENTGATE_MAGIC_TOKENS:-}
     volumes:
       - agentgate-data:/data
     depends_on:

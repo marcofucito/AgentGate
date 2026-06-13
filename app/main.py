@@ -20,6 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 DATABASE_URL = os.getenv("AGENTGATE_DATABASE_URL", "sqlite:///./agentgate.db")
 BASE_URL = os.getenv("AGENTGATE_BASE_URL", "http://localhost:8000")
 MAGIC_LOGIN_TOKEN = os.getenv("AGENTGATE_MAGIC_TOKEN", "")
+MAGIC_LOGIN_TOKENS = os.getenv("AGENTGATE_MAGIC_TOKENS", "")
 ADMIN_EMAIL = os.getenv("AGENTGATE_ADMIN_EMAIL", "admin@example.com")
 ADMIN_PASSWORD = os.getenv("AGENTGATE_ADMIN_PASSWORD", "change-me-before-demo")
 SECRET_KEY = os.getenv("AGENTGATE_SECRET_KEY", secrets.token_urlsafe(32))
@@ -143,6 +144,11 @@ def require_user(request: Request):
     if not request.session.get("user_id"):
         return RedirectResponse("/login", status_code=303)
     return None
+
+
+def magic_tokens() -> list[str]:
+    raw = "\n".join([MAGIC_LOGIN_TOKEN, MAGIC_LOGIN_TOKENS])
+    return [item.strip() for item in raw.replace(",", "\n").splitlines() if item.strip()]
 
 
 def current_api_key(request: Request, db: Session) -> ApiKey:
@@ -435,7 +441,7 @@ async def login_page(request: Request):
 
 @app.get("/magic/{token}")
 async def magic_login(request: Request, token: str):
-    if not MAGIC_LOGIN_TOKEN or not secrets.compare_digest(token, MAGIC_LOGIN_TOKEN):
+    if not any(secrets.compare_digest(token, valid_token) for valid_token in magic_tokens()):
         raise HTTPException(status_code=404, detail="Not found")
     db = get_db()
     try:
