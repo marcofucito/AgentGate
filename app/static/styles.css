@@ -12,6 +12,7 @@
 body {
   background: var(--bg);
   color: var(--ink);
+  overflow-x: hidden;
 }
 
 .shell {
@@ -22,6 +23,12 @@ body {
 .topbar {
   background: #15161a;
   color: white;
+}
+
+.topbar .shell,
+.topbar .shell > .d-flex {
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .brand-mark {
@@ -49,6 +56,18 @@ body {
 .login-panel {
   background: var(--panel);
   border: 1px solid var(--line);
+  border-radius: 8px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.demo-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
   border-radius: 8px;
 }
 
@@ -104,21 +123,158 @@ body {
   background: #fbfcfe;
 }
 
+.audit-review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.review-header,
+.operation-item,
+.audit-event-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.event-count {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .review-counts {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
   gap: 6px;
+}
+
+.operation-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.operation-item {
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.operation-main {
+  min-width: 0;
+}
+
+.review-card,
+.operation-list,
+.operation-item,
+.recent-main {
+  min-width: 0;
+}
+
+.recent-main {
+  flex: 1 1 0;
+  max-width: 100%;
+}
+
+.operation-side,
+.audit-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
 }
 
 .command-preview {
   display: block;
-  max-width: 520px;
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #424b57;
   font-size: 12px;
+}
+
+.full-width {
+  flex-basis: 100%;
+  max-width: 100%;
+}
+
+.audit-timeline {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.recent-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.recent-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.recent-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.recent-status {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.audit-event {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfcfe;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.audit-operation {
+  font-weight: 700;
+}
+
+.audit-command {
+  display: block;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 7px;
+  background: #eef1f5;
+  color: #29313d;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 12px;
+}
+
+.audit-output {
+  margin-top: 10px;
+  margin-bottom: 0;
+  max-height: 240px;
 }
 
 .btn-primary {
@@ -135,4 +291,22 @@ textarea.code {
   min-height: 310px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .demo-alert,
+  .audit-event-top,
+  .recent-item,
+  .review-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .demo-alert .btn {
+    width: 100%;
+  }
+
+  .audit-review-grid {
+    grid-template-columns: 1fr;
+  }
 }

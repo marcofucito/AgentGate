@@ -1,83 +1,76 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="h2 mb-1">Audit Logs</h1>
-<p class="muted mb-3">Every allowed, denied and failed command is recorded with actor, server and human-readable operation summary.</p>
+<div class="d-flex justify-content-between align-items-end mb-4">
+  <div>
+    <h1 class="h2 mb-1">Audit Logs</h1>
+    <p class="muted mb-0">Human-readable review of who did what, on which server, through which AgentGate key.</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="/">Back to dashboard</a>
+</div>
 
 <div class="panel p-3 mb-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <h2 class="h5 mb-1">Human review by server</h2>
-      <p class="muted mb-0">A compact summary of what each agent or dashboard user did on every onboarded server.</p>
-    </div>
-  </div>
-  <div class="row g-3">
+  <h2 class="h5 mb-3">Human review by server</h2>
+  <div class="audit-review-grid">
     {% for review in server_reviews %}
-    <div class="col-lg-6">
-      <div class="review-card p-3 h-100">
-        <div class="d-flex justify-content-between gap-3 mb-2">
-          <div>
-            <h3 class="h6 mb-1">{{ review.server.name }}</h3>
-            <div class="muted">{{ review.server.host }}:{{ review.server.port }} as {{ review.server.username }}</div>
-          </div>
-          <div class="text-end">
-            <div class="fw-semibold">{{ review.total }} events</div>
-            <div class="review-counts">
-              <span class="badge badge-allowed">{{ review.allowed }} allowed</span>
-              <span class="badge badge-denied">{{ review.denied }} denied</span>
-              <span class="badge badge-error">{{ review.error }} error</span>
-            </div>
-          </div>
+    <section class="review-card p-3">
+      <div class="review-header">
+        <div>
+          <h3 class="h6 mb-1">{{ review.server.name }}</h3>
+          <div class="muted small">{{ review.server.host }}:{{ review.server.port }} as {{ review.server.username }}</div>
         </div>
-        <table class="table table-sm mb-0">
-          <thead><tr><th>Operation</th><th>Last actor</th><th>Last result</th><th>Count</th></tr></thead>
-          <tbody>
-            {% for operation in review.operations %}
-            <tr>
-              <td>
-                <div class="fw-semibold">{{ operation.name }}</div>
-                <code class="command-preview">{{ operation.last_command }}</code>
-              </td>
-              <td>{{ operation.last_actor }}</td>
-              <td><span class="badge badge-{{ operation.last_decision }}">{{ operation.last_decision }}</span></td>
-              <td>{{ operation.count }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <div class="event-count">{{ review.total }} events</div>
       </div>
-    </div>
+      <div class="review-counts my-3">
+        <span class="badge badge-allowed">{{ review.allowed }} allowed</span>
+        <span class="badge badge-denied">{{ review.denied }} denied</span>
+        <span class="badge badge-error">{{ review.error }} error</span>
+      </div>
+      <div class="operation-list">
+        {% for operation in review.operations %}
+        <article class="operation-item">
+          <div class="operation-main">
+            <div class="fw-semibold">{{ operation.name }}</div>
+            <div class="muted small">{{ operation.last_actor }}</div>
+          </div>
+          <div class="operation-side">
+            <span class="badge badge-{{ operation.last_decision }}">{{ operation.last_decision }}</span>
+            <span class="muted small">{{ operation.count }}x</span>
+          </div>
+          <code class="command-preview full-width">{{ operation.last_command }}</code>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
     {% else %}
-    <div class="col-12 muted">No server activity yet.</div>
+    <div class="muted">No server activity yet.</div>
     {% endfor %}
   </div>
 </div>
 
 <div class="panel p-3">
   <h2 class="h5 mb-3">Detailed command trail</h2>
-  <table class="table align-middle">
-    <thead><tr><th>Time</th><th>Actor</th><th>Server</th><th>Operation</th><th>Command</th><th>Decision</th><th>Exit</th></tr></thead>
-    <tbody>
-      {% for row in rows %}
-      {% set log = row.log %}
-      <tr>
-        <td class="muted">{{ log.created_at.strftime("%H:%M:%S") }}</td>
-        <td>{{ row.actor }}</td>
-        <td>{{ row.server.name if row.server else "-" }}</td>
-        <td class="fw-semibold">{{ row.operation }}</td>
-        <td><code>{{ log.command }}</code></td>
-        <td><span class="badge badge-{{ log.decision }}">{{ log.decision }}</span></td>
-        <td>{{ log.exit_code if log.exit_code is not none else "-" }}</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td colspan="6">
-          {% if log.reason %}<div class="muted mb-2">{{ log.reason }}</div>{% endif %}
-          {% if log.stdout_preview %}<pre class="terminal">{{ log.stdout_preview }}</pre>{% endif %}
-          {% if log.stderr_preview %}<pre class="terminal">{{ log.stderr_preview }}</pre>{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="audit-timeline">
+    {% for row in rows %}
+    {% set log = row.log %}
+    <article class="audit-event">
+      <div class="audit-event-top">
+        <div>
+          <div class="audit-operation">{{ row.operation }}</div>
+          <div class="muted small">{{ log.created_at.strftime("%H:%M:%S") }} · {{ row.actor }} · {{ row.server.name if row.server else "-" }}</div>
+        </div>
+        <div class="audit-status">
+          <span class="badge badge-{{ log.decision }}">{{ log.decision }}</span>
+          <span class="muted small">exit {{ log.exit_code if log.exit_code is not none else "-" }}</span>
+        </div>
+      </div>
+      <code class="audit-command">{{ log.command }}</code>
+      {% if log.reason %}<div class="muted small mt-2">{{ log.reason }}</div>{% endif %}
+      {% if log.stdout_preview %}<pre class="terminal audit-output">{{ log.stdout_preview }}</pre>{% endif %}
+      {% if log.stderr_preview %}<pre class="terminal audit-output">{{ log.stderr_preview }}</pre>{% endif %}
+    </article>
+    {% else %}
+    <div class="muted">No commands yet.</div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}

@@ -375,7 +375,16 @@ async def home(request: Request):
         servers_by_id = {s.id: s for s in db.query(ServerTarget).all()}
         keys_by_id = {k.id: k for k in db.query(ApiKey).all()}
         recent_rows = build_audit_rows(recent, servers_by_id, keys_by_id)
-        return templates.TemplateResponse("dashboard.html", {"request": request, "stats": stats, "recent": recent_rows})
+        ready_key = (
+            db.query(ApiKey)
+            .filter(ApiKey.revoked.is_(False), ApiKey.encrypted_token.isnot(None))
+            .order_by(ApiKey.created_at.desc())
+            .first()
+        )
+        return templates.TemplateResponse(
+            "dashboard.html",
+            {"request": request, "stats": stats, "recent": recent_rows, "ready_key": ready_key},
+        )
     finally:
         db.close()
 

@@ -8,6 +8,18 @@
   <a class="btn btn-primary" href="/integration">Install Codex skill</a>
 </div>
 
+<div class="demo-alert p-3 mb-4">
+  <div>
+    <div class="fw-semibold">Judges quick test</div>
+    <div class="muted">Download a ready-to-use Codex skill with the demo AgentGate API key already embedded. Install it and ask Codex to operate a server through AgentGate.</div>
+  </div>
+  {% if ready_key %}
+  <a class="btn btn-primary" href="/skill/agentgate.md?api_key_id={{ ready_key.id }}" download="SKILL.md">Download ready skill</a>
+  {% else %}
+  <a class="btn btn-primary" href="/integration">Create ready skill</a>
+  {% endif %}
+</div>
+
 <div class="row g-3 mb-4">
   <div class="col-md-3"><div class="metric"><div class="metric-value">{{ stats.servers }}</div><div class="metric-label">Servers onboarded</div></div></div>
   <div class="col-md-3"><div class="metric"><div class="metric-value">{{ stats.api_keys }}</div><div class="metric-label">Active API keys</div></div></div>
@@ -20,26 +32,23 @@
     <h2 class="h5 mb-0">Recent audit</h2>
     <a href="/audit">View all</a>
   </div>
-  <table class="table mb-0">
-    <thead><tr><th>Time</th><th>Actor</th><th>Server</th><th>Operation</th><th>Decision</th><th>Exit</th></tr></thead>
-    <tbody>
-      {% for row in recent %}
-      {% set log = row.log %}
-      <tr>
-        <td class="muted">{{ log.created_at.strftime("%H:%M:%S") }}</td>
-        <td>{{ row.actor }}</td>
-        <td>{{ row.server.name if row.server else "-" }}</td>
-        <td>
-          <div class="fw-semibold">{{ row.operation }}</div>
-          <code class="command-preview">{{ log.command }}</code>
-        </td>
-        <td><span class="badge badge-{{ log.decision }}">{{ log.decision }}</span></td>
-        <td>{{ log.exit_code if log.exit_code is not none else "-" }}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="6" class="muted">No commands yet. Run the demo diagnosis from Codex or the Run page.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="recent-list">
+    {% for row in recent %}
+    {% set log = row.log %}
+    <article class="recent-item">
+      <div class="recent-main">
+        <div class="fw-semibold">{{ row.operation }}</div>
+        <div class="muted small">{{ log.created_at.strftime("%H:%M:%S") }} · {{ row.actor }} · {{ row.server.name if row.server else "-" }}</div>
+        <code class="command-preview full-width">{{ log.command }}</code>
+      </div>
+      <div class="recent-status">
+        <span class="badge badge-{{ log.decision }}">{{ log.decision }}</span>
+        <span class="muted small">exit {{ log.exit_code if log.exit_code is not none else "-" }}</span>
+      </div>
+    </article>
+    {% else %}
+    <div class="muted">No commands yet. Run the demo diagnosis from Codex or the Run page.</div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}
