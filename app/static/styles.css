@@ -98,6 +98,29 @@ body {
   vertical-align: middle;
 }
 
+.review-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.review-counts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.command-preview {
+  display: block;
+  max-width: 520px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #424b57;
+  font-size: 12px;
+}
+
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);

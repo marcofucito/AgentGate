@@ -211,6 +211,101 @@ def create_audit(db: Session, api_key_id, server_id, command, decision, reason="
     return audit
 
 
+def operation_summary(command: str) -> str:
+    normalized = " ".join(command.lower().split())
+    checks = [
+        (["apt-get", "install", "docker"], "Install Docker"),
+        (["docker.io", "install"], "Install Docker"),
+        (["apt-get", "purge", "docker"], "Uninstall Docker"),
+        (["apt-get", "remove", "docker"], "Uninstall Docker"),
+        (["nuking /var/lib/docker"], "Uninstall Docker"),
+        (["apt-get", "install", "python3"], "Install Python 3"),
+        (["python3 --version"], "Verify Python 3"),
+        (["docker --version"], "Verify Docker"),
+        (["free", "/mem:"], "Check memory usage"),
+        (["df", "-h"], "Check disk usage"),
+        (["uptime"], "Check uptime"),
+        (["systemctl", "nginx"], "Check nginx service"),
+        (["service", "nginx", "status"], "Check nginx service"),
+        (["whoami", "hostname"], "Connection identity check"),
+        (["apt-get", "update"], "Update package index"),
+        (["systemctl", "enable"], "Enable service"),
+        (["systemctl", "stop"], "Stop service"),
+        (["systemctl", "start"], "Start service"),
+        (["rm -rf"], "Destructive file removal attempt"),
+        (["cat /etc/shadow"], "Sensitive file access attempt"),
+    ]
+    for tokens, label in checks:
+        if all(token in normalized for token in tokens):
+            return label
+    if normalized.startswith("sudo "):
+        return "Privileged shell command"
+    if normalized.startswith(("apt ", "apt-get ")):
+        return "Package management"
+    if normalized.startswith(("systemctl ", "service ")):
+        return "Service management"
+    return "Shell command"
+
+
+def audit_actor(log: AuditLog, keys_by_id: dict[int, ApiKey]) -> str:
+    key = keys_by_id.get(log.api_key_id) if log.api_key_id else None
+    if key:
+        return f"{key.name} ({key.key_prefix}...)"
+    return "Dashboard user"
+
+
+def build_audit_rows(logs: list[AuditLog], servers_by_id: dict[int, ServerTarget], keys_by_id: dict[int, ApiKey]):
+    rows = []
+    for log in logs:
+        rows.append(
+            {
+                "log": log,
+                "server": servers_by_id.get(log.server_id) if log.server_id else None,
+                "actor": audit_actor(log, keys_by_id),
+                "operation": operation_summary(log.command),
+            }
+        )
+    return rows
+
+
+def build_server_reviews(rows):
+    reviews = {}
+    for row in rows:
+        server = row["server"]
+        if not server:
+            continue
+        review = reviews.setdefault(
+            server.id,
+            {
+                "server": server,
+                "total": 0,
+                "allowed": 0,
+                "denied": 0,
+                "error": 0,
+                "operations": {},
+            },
+        )
+        log = row["log"]
+        review["total"] += 1
+        if log.decision in ("allowed", "denied", "error"):
+            review[log.decision] += 1
+        operation = review["operations"].setdefault(
+            row["operation"],
+            {
+                "name": row["operation"],
+                "count": 0,
+                "last_actor": row["actor"],
+                "last_decision": log.decision,
+                "last_time": log.created_at,
+                "last_command": log.command,
+            },
+        )
+        operation["count"] += 1
+    for review in reviews.values():
+        review["operations"] = sorted(review["operations"].values(), key=lambda item: item["last_time"], reverse=True)
+    return sorted(reviews.values(), key=lambda item: item["server"].name.lower())
+
+
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(bind=engine)
@@ -250,7 +345,10 @@ async def home(request: Request):
             "denied": db.query(AuditLog).filter(AuditLog.decision == "denied").count(),
         }
         recent = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(6).all()
-        return templates.TemplateResponse("dashboard.html", {"request": request, "stats": stats, "recent": recent})
+        servers_by_id = {s.id: s for s in db.query(ServerTarget).all()}
+        keys_by_id = {k.id: k for k in db.query(ApiKey).all()}
+        recent_rows = build_audit_rows(recent, servers_by_id, keys_by_id)
+        return templates.TemplateResponse("dashboard.html", {"request": request, "stats": stats, "recent": recent_rows})
     finally:
         db.close()
 
@@ -575,7 +673,12 @@ async def audit_page(request: Request):
         logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(100).all()
         servers_by_id = {s.id: s for s in db.query(ServerTarget).all()}
         keys_by_id = {k.id: k for k in db.query(ApiKey).all()}
-        return templates.TemplateResponse("audit.html", {"request": request, "logs": logs, "servers": servers_by_id, "keys": keys_by_id})
+        rows = build_audit_rows(logs, servers_by_id, keys_by_id)
+        server_reviews = build_server_reviews(rows)
+        return templates.TemplateResponse(
+            "audit.html",
+            {"request": request, "rows": rows, "server_reviews": server_reviews},
+        )
     finally:
         db.close()
 

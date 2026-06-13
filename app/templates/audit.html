@@ -1,23 +1,76 @@
 {% extends "base.html" %}
 {% block content %}
 <h1 class="h2 mb-1">Audit Logs</h1>
-<p class="muted mb-3">Every allowed, denied and failed command is recorded.</p>
+<p class="muted mb-3">Every allowed, denied and failed command is recorded with actor, server and human-readable operation summary.</p>
+
+<div class="panel p-3 mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="h5 mb-1">Human review by server</h2>
+      <p class="muted mb-0">A compact summary of what each agent or dashboard user did on every onboarded server.</p>
+    </div>
+  </div>
+  <div class="row g-3">
+    {% for review in server_reviews %}
+    <div class="col-lg-6">
+      <div class="review-card p-3 h-100">
+        <div class="d-flex justify-content-between gap-3 mb-2">
+          <div>
+            <h3 class="h6 mb-1">{{ review.server.name }}</h3>
+            <div class="muted">{{ review.server.host }}:{{ review.server.port }} as {{ review.server.username }}</div>
+          </div>
+          <div class="text-end">
+            <div class="fw-semibold">{{ review.total }} events</div>
+            <div class="review-counts">
+              <span class="badge badge-allowed">{{ review.allowed }} allowed</span>
+              <span class="badge badge-denied">{{ review.denied }} denied</span>
+              <span class="badge badge-error">{{ review.error }} error</span>
+            </div>
+          </div>
+        </div>
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Operation</th><th>Last actor</th><th>Last result</th><th>Count</th></tr></thead>
+          <tbody>
+            {% for operation in review.operations %}
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ operation.name }}</div>
+                <code class="command-preview">{{ operation.last_command }}</code>
+              </td>
+              <td>{{ operation.last_actor }}</td>
+              <td><span class="badge badge-{{ operation.last_decision }}">{{ operation.last_decision }}</span></td>
+              <td>{{ operation.count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-12 muted">No server activity yet.</div>
+    {% endfor %}
+  </div>
+</div>
+
 <div class="panel p-3">
+  <h2 class="h5 mb-3">Detailed command trail</h2>
   <table class="table align-middle">
-    <thead><tr><th>Time</th><th>API key</th><th>Server</th><th>Command</th><th>Decision</th><th>Exit</th></tr></thead>
+    <thead><tr><th>Time</th><th>Actor</th><th>Server</th><th>Operation</th><th>Command</th><th>Decision</th><th>Exit</th></tr></thead>
     <tbody>
-      {% for log in logs %}
+      {% for row in rows %}
+      {% set log = row.log %}
       <tr>
         <td class="muted">{{ log.created_at.strftime("%H:%M:%S") }}</td>
-        <td>{{ keys.get(log.api_key_id).key_prefix ~ "..." if log.api_key_id and keys.get(log.api_key_id) else "dashboard" }}</td>
-        <td>{{ servers.get(log.server_id).name if log.server_id and servers.get(log.server_id) else "-" }}</td>
+        <td>{{ row.actor }}</td>
+        <td>{{ row.server.name if row.server else "-" }}</td>
+        <td class="fw-semibold">{{ row.operation }}</td>
         <td><code>{{ log.command }}</code></td>
         <td><span class="badge badge-{{ log.decision }}">{{ log.decision }}</span></td>
         <td>{{ log.exit_code if log.exit_code is not none else "-" }}</td>
       </tr>
       <tr>
         <td></td>
-        <td colspan="5">
+        <td colspan="6">
           {% if log.reason %}<div class="muted mb-2">{{ log.reason }}</div>{% endif %}
           {% if log.stdout_preview %}<pre class="terminal">{{ log.stdout_preview }}</pre>{% endif %}
           {% if log.stderr_preview %}<pre class="terminal">{{ log.stderr_preview }}</pre>{% endif %}

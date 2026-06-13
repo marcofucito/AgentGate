@@ -21,17 +21,23 @@
     <a href="/audit">View all</a>
   </div>
   <table class="table mb-0">
-    <thead><tr><th>Time</th><th>Command</th><th>Decision</th><th>Exit</th></tr></thead>
+    <thead><tr><th>Time</th><th>Actor</th><th>Server</th><th>Operation</th><th>Decision</th><th>Exit</th></tr></thead>
     <tbody>
-      {% for log in recent %}
+      {% for row in recent %}
+      {% set log = row.log %}
       <tr>
         <td class="muted">{{ log.created_at.strftime("%H:%M:%S") }}</td>
-        <td><code>{{ log.command }}</code></td>
+        <td>{{ row.actor }}</td>
+        <td>{{ row.server.name if row.server else "-" }}</td>
+        <td>
+          <div class="fw-semibold">{{ row.operation }}</div>
+          <code class="command-preview">{{ log.command }}</code>
+        </td>
         <td><span class="badge badge-{{ log.decision }}">{{ log.decision }}</span></td>
         <td>{{ log.exit_code if log.exit_code is not none else "-" }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="4" class="muted">No commands yet. Run the demo diagnosis from Codex or the Run page.</td></tr>
+      <tr><td colspan="6" class="muted">No commands yet. Run the demo diagnosis from Codex or the Run page.</td></tr>
       {% endfor %}
     </tbody>
   </table>
