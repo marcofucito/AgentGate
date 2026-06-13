@@ -80,6 +80,8 @@ class ApiKey(Base):
     key_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     key_prefix: Mapped[str] = mapped_column(String(32))
     encrypted_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    allowed_targets: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    allowed_patterns: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
@@ -161,6 +163,41 @@ def ensure_schema():
         columns = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(api_keys)").fetchall()]
         if "encrypted_token" not in columns:
             conn.exec_driver_sql("ALTER TABLE api_keys ADD COLUMN encrypted_token TEXT")
+        if "allowed_targets" not in columns:
+            conn.exec_driver_sql("ALTER TABLE api_keys ADD COLUMN allowed_targets TEXT")
+        if "allowed_patterns" not in columns:
+            conn.exec_driver_sql("ALTER TABLE api_keys ADD COLUMN allowed_patterns TEXT")
+
+
+def scope_items(value: str | None) -> list[str]:
+    if not value:
+        return []
+    raw_items = value.replace(",", "\n").splitlines()
+    return [item.strip() for item in raw_items if item.strip()]
+
+
+def api_key_target_allowed(api_key: ApiKey, server: ServerTarget) -> tuple[bool, str]:
+    targets = scope_items(api_key.allowed_targets)
+    if not targets:
+        return True, "API key has unrestricted target scope"
+    allowed = {target.lower() for target in targets}
+    if server.name.lower() in allowed or str(server.id) in allowed:
+        return True, f"API key scope allows target {server.name}"
+    return False, f"API key is not allowed to access target {server.name}"
+
+
+def api_key_command_allowed(api_key: ApiKey, command: str) -> tuple[bool, str]:
+    patterns = scope_items(api_key.allowed_patterns)
+    if not patterns:
+        return True, "API key has unrestricted command scope"
+    normalized = " ".join(command.lower().split())
+    for pattern in patterns:
+        lowered = " ".join(pattern.lower().split())
+        if lowered.endswith("*") and normalized.startswith(lowered[:-1].rstrip()):
+            return True, f"API key scope matched command pattern: {pattern}"
+        if normalized == lowered:
+            return True, f"API key scope matched command pattern: {pattern}"
+    return False, "API key is not allowed to run this command"
 
 
 def is_command_allowed(command: str, allowed_patterns: list[str], denied_patterns: list[str], default_policy: str):
@@ -892,9 +929,10 @@ async def health():
 async def api_targets(request: Request):
     db = get_db()
     try:
-        current_api_key(request, db)
+        api_key = current_api_key(request, db)
         servers = db.query(ServerTarget).order_by(ServerTarget.name).all()
-        return [{"id": s.id, "name": s.name, "host": s.host, "port": s.port, "username": s.username, "default_policy": s.default_policy} for s in servers]
+        scoped_servers = [s for s in servers if api_key_target_allowed(api_key, s)[0]]
+        return [{"id": s.id, "name": s.name, "host": s.host, "port": s.port, "username": s.username, "default_policy": s.default_policy} for s in scoped_servers]
     finally:
         db.close()
 
@@ -915,6 +953,14 @@ async def api_ssh_exec(request: Request):
         server = db.query(ServerTarget).filter((ServerTarget.name == target) | (ServerTarget.id == target)).first()
         if not server:
             raise HTTPException(status_code=404, detail="Target not found")
+        target_ok, target_reason = api_key_target_allowed(api_key, server)
+        if not target_ok:
+            audit = create_audit(db, api_key.id, server.id, command, "denied", target_reason)
+            return JSONResponse({"target": server.name, "command": command, "decision": "denied", "reason": target_reason, "audit_id": audit.id}, status_code=403)
+        command_ok, command_reason = api_key_command_allowed(api_key, command)
+        if not command_ok:
+            audit = create_audit(db, api_key.id, server.id, command, "denied", command_reason)
+            return JSONResponse({"target": server.name, "command": command, "decision": "denied", "reason": command_reason, "audit_id": audit.id}, status_code=403)
         allowed = [r.pattern for r in server.rules if r.type == "allow"]
         denied = [r.pattern for r in server.rules if r.type == "deny"]
         ok, reason = is_command_allowed(command, allowed, denied, server.default_policy)

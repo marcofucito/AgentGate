@@ -102,6 +102,7 @@ The public HackRome skill is available in three forms:
 - Repo skill: `.agents/skills/agentgate/SKILL.md`
 - Codex app copy: `.codex/skills/agentgate/SKILL.md`
 - Remote skill URL: `https://agentgate.fucito.it/skill/agentgate.md`
+- GitHub ready skill with embedded public demo key: `github-ready-skill/agentgate/SKILL.md`
 
 Local install:
 
@@ -111,10 +112,24 @@ export AGENTGATE_BASE_URL=https://agentgate.fucito.it
 export AGENTGATE_API_KEY=ag_live_replace_me
 ```
 
+Ready-to-use GitHub demo install:
+
+```bash
+./github-ready-skill/install-agentgate-skill.sh
+```
+
+This installs a Codex skill that already includes a public demo API key. The key is restricted server-side to the `web-demo` target and safe diagnostic commands, so judges can test AgentGate quickly without receiving SSH credentials or configuring environment variables.
+
 Demo prompt:
 
 ```text
 Usa AgentGate per diagnosticare il server hackrome-ssh: controlla utente, hostname, uptime e stato nginx.
+```
+
+GitHub ready skill prompt:
+
+```text
+Use AgentGate to check disk, memory, uptime, and processes on web-demo.
 ```
 
 Docker install prompt:
@@ -135,7 +150,8 @@ curl -sS -H "Authorization: Bearer $AGENTGATE_API_KEY" \
 ## Security notes
 
 - SSH credentials are encrypted with Fernet before storage.
-- API keys are shown once and stored only as SHA-256 hashes.
+- API keys are hashed for authentication. Exportable ready-skill keys are also stored encrypted so the dashboard can generate a complete Codex skill.
+- Public GitHub demo keys are scoped server-side to safe targets and safe command patterns.
 - Per-server command policy supports `allow_all` and `deny_all`.
 - Deny patterns always win over allow patterns.
 - This is a hackathon MVP, not an enterprise PAM replacement.
