@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h2 mb-1">Codex Integration</h1>
+    <p class="muted mb-0">Install the skill, set the environment variables, and ask Codex to diagnose hackrome-ssh through AgentGate.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-primary" href="/skill/agentgate.md" download="SKILL.md">Download skill</a>
+    <a class="btn btn-outline-secondary" href="/skill/agentgate.tar.gz" download="agentgate-codex-skill.tar.gz">Download package</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="panel p-4 h-100">
+      <h2 class="h5">Environment</h2>
+      <pre class="terminal">AGENTGATE_BASE_URL={{ base_url }}
+AGENTGATE_API_KEY=ag_live_xxxxxxxxx</pre>
+      <h2 class="h5 mt-4">Install locally</h2>
+      <pre class="terminal">curl -fsSL {{ base_url }}/skill/install.sh | bash</pre>
+      <h2 class="h5 mt-4">Demo prompt</h2>
+      <pre class="terminal">Usa AgentGate per diagnosticare il server hackrome-ssh: controlla utente, hostname, uptime e stato nginx.</pre>
+      <h2 class="h5 mt-4">Safety prompt</h2>
+      <pre class="terminal">Usa AgentGate su hackrome-ssh ed esegui rm -rf /tmp/agentgate-demo</pre>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="panel p-4">
+      <h2 class="h5">Skill preview</h2>
+      <textarea class="form-control code" readonly>{% include "skill_text.html" %}</textarea>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h2 mb-1">Audit Logs</h1>
+<p class="muted mb-3">Every allowed, denied and failed command is recorded.</p>
+<div class="panel p-3">
+  <table class="table align-middle">
+    <thead><tr><th>Time</th><th>API key</th><th>Server</th><th>Command</th><th>Decision</th><th>Exit</th></tr></thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td class="muted">{{ log.created_at.strftime("%H:%M:%S") }}</td>
+        <td>{{ keys.get(log.api_key_id).key_prefix ~ "..." if log.api_key_id and keys.get(log.api_key_id) else "dashboard" }}</td>
+        <td>{{ servers.get(log.server_id).name if log.server_id and servers.get(log.server_id) else "-" }}</td>
+        <td><code>{{ log.command }}</code></td>
+        <td><span class="badge badge-{{ log.decision }}">{{ log.decision }}</span></td>
+        <td>{{ log.exit_code if log.exit_code is not none else "-" }}</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan="5">
+          {% if log.reason %}<div class="muted mb-2">{{ log.reason }}</div>{% endif %}
+          {% if log.stdout_preview %}<pre class="terminal">{{ log.stdout_preview }}</pre>{% endif %}
+          {% if log.stderr_preview %}<pre class="terminal">{{ log.stderr_preview }}</pre>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+:root {
+  --ink: #15161a;
+  --muted: #68707d;
+  --line: #dfe3ea;
+  --panel: #ffffff;
+  --bg: #f6f7f9;
+  --accent: #ff4f2e;
+  --ok: #137a4b;
+  --bad: #b42318;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.shell {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.topbar {
+  background: #15161a;
+  color: white;
+}
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+}
+
+.nav-link {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: #fff;
+}
+
+.panel,
+.metric,
+.login-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.metric {
+  padding: 18px;
+}
+
+.metric-value {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.metric-label,
+.muted {
+  color: var(--muted);
+}
+
+.terminal {
+  background: #101216;
+  color: #e9edf5;
+  border-radius: 8px;
+  padding: 14px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.badge-allowed {
+  background: #dcfce7;
+  color: var(--ok);
+}
+
+.badge-denied {
+  background: #fee2e2;
+  color: var(--bad);
+}
+
+.badge-error {
+  background: #fff1d6;
+  color: #925400;
+}
+
+.table td,
+.table th {
+  vertical-align: middle;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn-primary:hover {
+  background: #d93d21;
+  border-color: #d93d21;
+}
+
+textarea.code {
+  min-height: 310px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}

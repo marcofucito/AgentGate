@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h2 mb-1">API Keys</h1>
+    <p class="muted mb-0">Generate a broker key for Codex. The SSH secret stays inside AgentGate.</p>
+  </div>
+</div>
+
+{% if new_key %}
+<div class="alert alert-success">
+  <strong>Copy this key now. It will only be shown once.</strong>
+  <pre class="terminal mt-2 mb-0">AGENTGATE_BASE_URL={{ base_url }}
+AGENTGATE_API_KEY={{ new_key }}</pre>
+</div>
+{% endif %}
+
+<div class="panel p-4 mb-3">
+  <form method="post" class="row g-3 align-items-end">
+    <div class="col-md-6"><label class="form-label">Key name</label><input class="form-control" name="name" value="Codex HackRome Demo"></div>
+    <div class="col-md-3"><button class="btn btn-primary">Generate API key</button></div>
+  </form>
+</div>
+
+<div class="panel p-3">
+  <table class="table mb-0">
+    <thead><tr><th>Name</th><th>Prefix</th><th>Status</th><th>Last used</th><th></th></tr></thead>
+    <tbody>
+      {% for key in keys %}
+      <tr>
+        <td>{{ key.name }}</td>
+        <td><code>{{ key.key_prefix }}...</code></td>
+        <td>{{ "revoked" if key.revoked else "active" }}</td>
+        <td>{{ key.last_used_at or "-" }}</td>
+        <td>{% if not key.revoked %}<form method="post" action="/api-keys/{{ key.id }}/revoke"><button class="btn btn-sm btn-outline-danger">Revoke</button></form>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

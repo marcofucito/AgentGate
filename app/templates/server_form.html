@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h2 mb-3">{{ "Edit" if server else "Add" }} server</h1>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<div class="panel p-4">
+  <form method="post">
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Name</label><input class="form-control" name="name" value="{{ server.name if server else '' }}" placeholder="hackrome-ssh" required></div>
+      <div class="col-md-6"><label class="form-label">Host</label><input class="form-control" name="host" value="{{ server.host if server else '' }}" placeholder="157.230.182.249" required></div>
+      <div class="col-md-3"><label class="form-label">Port</label><input class="form-control" name="port" type="number" value="{{ server.port if server else 22 }}" required></div>
+      <div class="col-md-3"><label class="form-label">Username</label><input class="form-control" name="username" value="{{ server.username if server else '' }}" placeholder="agentgate" required></div>
+      <div class="col-md-3">
+        <label class="form-label">Auth type</label>
+        <select class="form-select" name="auth_type">
+          <option value="password" {% if not server or server.auth_type == "password" %}selected{% endif %}>password</option>
+          <option value="private_key" {% if server and server.auth_type == "private_key" %}selected{% endif %}>private_key</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Default policy</label>
+        <select class="form-select" name="default_policy">
+          <option value="allow_all" {% if not server or server.default_policy == "allow_all" %}selected{% endif %}>allow_all</option>
+          <option value="deny_all" {% if server and server.default_policy == "deny_all" %}selected{% endif %}>deny_all</option>
+        </select>
+      </div>
+      <div class="col-md-6"><label class="form-label">Password</label><input class="form-control" name="password" type="password" autocomplete="new-password" placeholder="{{ 'Leave blank to keep current' if server else 'Only for password auth' }}"></div>
+      <div class="col-md-6"><label class="form-label">Private key</label><textarea class="form-control" name="private_key" rows="5" placeholder="{{ 'Leave blank to keep current' if server else '' }}"></textarea></div>
+    </div>
+    <div class="mt-4 d-flex gap-2">
+      <button class="btn btn-primary">Save server</button>
+      <a class="btn btn-outline-secondary" href="/servers">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

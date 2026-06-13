@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 82vh;">
+  <div class="col-md-5 col-lg-4">
+    <div class="login-panel p-4">
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <span class="brand-mark">A</span>
+        <div>
+          <h1 class="h3 mb-0">AgentGate</h1>
+          <div class="muted">Cloud PAM broker for AI agents</div>
+        </div>
+      </div>
+      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+      <form method="post" action="/login">
+        <label class="form-label">Email</label>
+        <input class="form-control mb-3" name="email" type="email" autocomplete="username" placeholder="Email" required>
+        <label class="form-label">Password</label>
+        <input class="form-control mb-4" name="password" type="password" autocomplete="current-password" placeholder="Enter password" required>
+        <button class="btn btn-primary w-100">Sign in</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h2 mb-1">Run command</h1>
+<p class="muted mb-3">Manual execution uses the same policy and audit path as the API.</p>
+<div class="panel p-4 mb-3">
+  <form method="post">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Target</label>
+        <select class="form-select" name="server_id">
+          {% for server in servers %}<option value="{{ server.id }}">{{ server.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-8">
+        <label class="form-label">Command</label>
+        <input class="form-control" name="command" value="df -h && free -m && uptime && ps aux | head" required>
+      </div>
+    </div>
+    <button class="btn btn-primary mt-3">Execute through AgentGate</button>
+  </form>
+</div>
+{% if result %}
+<div class="panel p-3">
+  <div class="mb-2"><span class="badge badge-{{ result.decision }}">{{ result.decision }}</span> <span class="muted">{{ result.reason }}</span></div>
+  {% if result.stdout %}<h2 class="h6">stdout</h2><pre class="terminal">{{ result.stdout }}</pre>{% endif %}
+  {% if result.stderr %}<h2 class="h6">stderr</h2><pre class="terminal">{{ result.stderr }}</pre>{% endif %}
+  <div class="muted">Audit ID: {{ result.audit_id }}</div>
+</div>
+{% endif %}
+{% endblock %}

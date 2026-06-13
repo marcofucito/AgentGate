@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h2 mb-1">Policy: {{ server.name }}</h1>
+    <p class="muted mb-0">Deny rules always win. Keep demo fast, then tighten policy live.</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="/servers">Back</a>
+</div>
+
+<div class="panel p-4 mb-3">
+  <form method="post" class="row g-3 align-items-end">
+    <div class="col-md-6">
+      <label class="form-label">Default mode</label>
+      <select class="form-select" name="default_policy">
+        <option value="allow_all" {% if server.default_policy == "allow_all" %}selected{% endif %}>Allow all unless denied</option>
+        <option value="deny_all" {% if server.default_policy == "deny_all" %}selected{% endif %}>Deny all unless allowed</option>
+      </select>
+    </div>
+    <div class="col-md-3"><button class="btn btn-primary">Save mode</button></div>
+  </form>
+</div>
+
+<div class="row g-3">
+  {% for type in ["deny", "allow"] %}
+  <div class="col-md-6">
+    <div class="panel p-3 h-100">
+      <h2 class="h5">{{ "Denied" if type == "deny" else "Allowed" }} command patterns</h2>
+      <form method="post" action="/servers/{{ server.id }}/rules" class="d-flex gap-2 mb-3">
+        <input type="hidden" name="type" value="{{ type }}">
+        <input class="form-control" name="pattern" placeholder="{{ 'rm -rf' if type == 'deny' else 'df -h' }}">
+        <button class="btn btn-outline-secondary">Add</button>
+      </form>
+      <div class="d-flex flex-column gap-2">
+        {% for rule in server.rules if rule.type == type %}
+        <div class="d-flex justify-content-between align-items-center border rounded p-2">
+          <code>{{ rule.pattern }}</code>
+          <form method="post" action="/rules/{{ rule.id }}/delete"><button class="btn btn-sm btn-outline-danger">Remove</button></form>
+        </div>
+        {% else %}
+        <div class="muted">No {{ type }} rules yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

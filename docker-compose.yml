@@ -1,0 +1,26 @@
+services:
+  agentgate:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      AGENTGATE_DATABASE_URL: sqlite:////data/agentgate.db
+      AGENTGATE_SECRET_KEY: ${AGENTGATE_SECRET_KEY:-agentgate-dev-session-secret-change-me}
+      AGENTGATE_MASTER_KEY: ${AGENTGATE_MASTER_KEY:-QuHlGdz5OYea5V-n13VQ6wiCYNaQECH4K6yxaux7Vds=}
+      AGENTGATE_BASE_URL: ${AGENTGATE_BASE_URL:-http://localhost:8000}
+      AGENTGATE_MAGIC_TOKEN: ${AGENTGATE_MAGIC_TOKEN:-}
+    volumes:
+      - agentgate-data:/data
+    depends_on:
+      - demo-ssh
+
+  demo-ssh:
+    build: ./demo-ssh
+    restart: unless-stopped
+    hostname: demo-ssh
+    ports:
+      - "127.0.0.1:2222:22"
+
+volumes:
+  agentgate-data:

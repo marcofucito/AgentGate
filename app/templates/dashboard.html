@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-end mb-4">
+  <div>
+    <h1 class="h2 mb-1">AgentGate dashboard</h1>
+    <p class="muted mb-0">The agent never gets the secret. It gets a controlled execution channel.</p>
+  </div>
+  <a class="btn btn-primary" href="/integration">Install Codex skill</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="metric"><div class="metric-value">{{ stats.servers }}</div><div class="metric-label">Servers onboarded</div></div></div>
+  <div class="col-md-3"><div class="metric"><div class="metric-value">{{ stats.api_keys }}</div><div class="metric-label">Active API keys</div></div></div>
+  <div class="col-md-3"><div class="metric"><div class="metric-value">{{ stats.commands }}</div><div class="metric-label">Commands executed</div></div></div>
+  <div class="col-md-3"><div class="metric"><div class="metric-value">{{ stats.denied }}</div><div class="metric-label">Denied commands</div></div></div>
+</div>
+
+<div class="panel p-3">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="h5 mb-0">Recent audit</h2>
+    <a href="/audit">View all</a>
+  </div>
+  <table class="table mb-0">
+    <thead><tr><th>Time</th><th>Command</th><th>Decision</th><th>Exit</th></tr></thead>
+    <tbody>
+      {% for log in recent %}
+      <tr>
+        <td class="muted">{{ log.created_at.strftime("%H:%M:%S") }}</td>
+        <td><code>{{ log.command }}</code></td>
+        <td><span class="badge badge-{{ log.decision }}">{{ log.decision }}</span></td>
+        <td>{{ log.exit_code if log.exit_code is not none else "-" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">No commands yet. Run the demo diagnosis from Codex or the Run page.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
