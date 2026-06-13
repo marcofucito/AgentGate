@@ -8,6 +8,8 @@ services:
       AGENTGATE_DATABASE_URL: sqlite:////data/agentgate.db
       AGENTGATE_SECRET_KEY: ${AGENTGATE_SECRET_KEY:-agentgate-dev-session-secret-change-me}
       AGENTGATE_MASTER_KEY: ${AGENTGATE_MASTER_KEY:-QuHlGdz5OYea5V-n13VQ6wiCYNaQECH4K6yxaux7Vds=}
+      AGENTGATE_ADMIN_EMAIL: ${AGENTGATE_ADMIN_EMAIL:-admin@example.com}
+      AGENTGATE_ADMIN_PASSWORD: ${AGENTGATE_ADMIN_PASSWORD:-change-me-before-demo}
       AGENTGATE_BASE_URL: ${AGENTGATE_BASE_URL:-http://localhost:8000}
       AGENTGATE_MAGIC_TOKEN: ${AGENTGATE_MAGIC_TOKEN:-}
     volumes:

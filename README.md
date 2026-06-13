@@ -34,12 +34,15 @@ Codex
 docker compose up --build
 ```
 
-Open http://localhost:8000 and log in:
+Before running a public demo, set a strong admin password:
 
-```text
-admin@example.com
-hackrome
+```bash
+export AGENTGATE_ADMIN_EMAIL=admin@example.com
+export AGENTGATE_ADMIN_PASSWORD='replace-with-a-long-random-password'
+docker compose up --build
 ```
+
+Open http://localhost:8000 and log in with those credentials. The hosted demo uses a rotated strong password and a rotated magic link for judging speed.
 
 The demo SSH target is created automatically:
 

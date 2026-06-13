@@ -20,6 +20,8 @@ from starlette.middleware.sessions import SessionMiddleware
 DATABASE_URL = os.getenv("AGENTGATE_DATABASE_URL", "sqlite:///./agentgate.db")
 BASE_URL = os.getenv("AGENTGATE_BASE_URL", "http://localhost:8000")
 MAGIC_LOGIN_TOKEN = os.getenv("AGENTGATE_MAGIC_TOKEN", "")
+ADMIN_EMAIL = os.getenv("AGENTGATE_ADMIN_EMAIL", "admin@example.com")
+ADMIN_PASSWORD = os.getenv("AGENTGATE_ADMIN_PASSWORD", "change-me-before-demo")
 SECRET_KEY = os.getenv("AGENTGATE_SECRET_KEY", secrets.token_urlsafe(32))
 MASTER_KEY = os.getenv("AGENTGATE_MASTER_KEY")
 if not MASTER_KEY:
@@ -375,8 +377,8 @@ def startup():
     ensure_schema()
     db = get_db()
     try:
-        if not db.query(User).filter_by(email="admin@example.com").first():
-            db.add(User(email="admin@example.com", password_hash=password_hash("hackrome")))
+        if not db.query(User).filter_by(email=ADMIN_EMAIL).first():
+            db.add(User(email=ADMIN_EMAIL, password_hash=password_hash(ADMIN_PASSWORD)))
         if db.query(ServerTarget).count() == 0:
             demo = ServerTarget(
                 name="web-demo",
@@ -437,7 +439,7 @@ async def magic_login(request: Request, token: str):
         raise HTTPException(status_code=404, detail="Not found")
     db = get_db()
     try:
-        user = db.query(User).filter_by(email="admin@example.com").first()
+        user = db.query(User).filter_by(email=ADMIN_EMAIL).first()
         if not user:
             raise HTTPException(status_code=404, detail="Not found")
         request.session["user_id"] = user.id
